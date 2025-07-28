@@ -24,7 +24,7 @@ export async function GET() {
       .eq("is_active", true)
       .order("updated_at", { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
       .throwOnError()
       
     console.log("Supabase query completed. Data:", data, "Error:", error)
@@ -56,16 +56,19 @@ export async function GET() {
       )
     }
 
-    // If no data found, return default content
+    // If no data found, return default content with 404 status
     if (!data) {
       console.log("No active content found, returning default content")
       return NextResponse.json(
         { 
           ...defaultContent,
-          _debug: { message: "No active content found in database" }
+          _debug: { 
+            message: "No active content found in database",
+            timestamp: new Date().toISOString()
+          }
         },
         { 
-          status: 200,
+          status: 200, // Still 200 to prevent client-side errors
           headers: {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
