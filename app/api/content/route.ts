@@ -1,6 +1,17 @@
-import { NextResponse } from "next/server"
-import { supabaseServer } from "@/lib/supabase/server"
-import { defaultContent } from "@/lib/default-content"
+import { NextResponse } from 'next/server'
+import { supabaseServer } from '@/lib/supabase/server'
+import { defaultContent } from '@/lib/default-content'
+
+// Define headers for API responses
+const headers = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+}
 
 // Revalidate every 60 seconds
 export const revalidate = 60
@@ -20,9 +31,9 @@ export async function GET() {
     // Fetch the latest active content from Supabase using the server client
     const { data, error } = await supabaseServer
       .from("landing_page_content")
-      .select("*")
-      .eq("is_active", true)
-      .order("updated_at", { ascending: false })
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle()
       .throwOnError()
@@ -42,18 +53,11 @@ export async function GET() {
         }
       }
       
-      console.error("Error response:", errorResponse)
-      return NextResponse.json(errorResponse,
-        { 
-          status: 200,
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-            "Content-Type": "application/json"
-          },
-        }
-      )
+      console.error('Error response:', errorResponse)
+      return NextResponse.json(errorResponse, {
+        status: 200,
+        headers
+      })
     }
 
     // If no data found, return default content with 404 status
@@ -68,13 +72,15 @@ export async function GET() {
           }
         },
         { 
-          status: 200, // Still 200 to prevent client-side errors
+          status: 200, 
           headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-            "Content-Type": "application/json"
-          },
+            ...headers,
+            'X-Content-Type-Options': 'nosniff',
+            'X-XSS-Protection': '1; mode=block',
+            'X-Frame-Options': 'DENY',
+            'X-Content-Security-Policy': 'default-src \'self\'',
+            'Referrer-Policy': 'same-origin'
+          }
         }
       )
     }
@@ -86,12 +92,7 @@ export async function GET() {
       data.content,
       { 
         status: 200,
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0",
-          "Content-Type": "application/json"
-        },
+        headers
       }
     )
   } catch (error) {
@@ -102,19 +103,15 @@ export async function GET() {
       { 
         ...defaultContent,
         _debug: { 
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: error instanceof Error ? error.message : 'Unknown error',
           stack: error instanceof Error ? error.stack : undefined,
-          name: error instanceof Error ? error.name : "UnknownError"
+          name: error instanceof Error ? error.name : 'UnknownError',
+          timestamp: new Date().toISOString()
         }
       },
       { 
-        status: 200, // Still return 200 to prevent client-side errors
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0",
-          "Content-Type": "application/json"
-        },
+        status: 200,
+        headers
       }
     )
   }
